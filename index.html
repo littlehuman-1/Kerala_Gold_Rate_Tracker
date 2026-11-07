@@ -27,6 +27,7 @@ header.hero{background:radial-gradient(120% 90% at 85% 0,var(--g7),var(--g9) 60%
 .chead{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .seg{display:inline-flex;background:#00000040;border-radius:99px;padding:3px}
 .seg button{border:0;background:none;color:#b9cfc3;font:500 13px var(--b);padding:5px 12px;border-radius:99px;cursor:pointer}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
 .seg button[aria-pressed=true]{background:var(--gold);color:var(--g9);font-weight:700}
 #chart{position:relative;touch-action:pan-y}svg{display:block;width:100%;height:auto}
 #tip{position:absolute;top:0;pointer-events:none;background:var(--g9);border:1px solid var(--gold);color:#fff;font-size:12px;padding:4px 8px;border-radius:8px;white-space:nowrap;transform:translateX(-50%);display:none}
@@ -66,14 +67,15 @@ footer{padding:0 0 28px;font-size:12.5px;color:var(--mut)}
    <div class="stats">
     <div class="stat"><b id="pavan">–</b><span>1 Pavan (8 gm)</span></div>
     <div class="stat"><b id="yest">–</b><span id="ydl">Yesterday</span></div>
-    <div class="stat"><b id="hl">–</b><span>6-month low – high</span></div>
+    <div class="stat"><b id="hl">–</b><span id="hll">Low – high</span></div>
    </div>
    <details><summary>Set today’s rate manually</summary><input id="ovr" type="number" inputmode="decimal" placeholder="₹ per gm" aria-label="Manual rate per gram"></details>
   </div>
   <div class="chartbox">
    <div class="chead"><span class="label">Price history</span>
-    <div class="seg" role="group" aria-label="Range"><button data-r="30" aria-pressed="false">1M</button><button data-r="90" aria-pressed="false">3M</button><button data-r="183" aria-pressed="true">6M</button></div></div>
+    <div class="seg" role="group" aria-label="Range"><button data-r="7">1W</button><button data-r="30">1M</button><button data-r="90">3M</button><button data-r="183">6M</button><button data-r="9999">All</button></div></div>
    <div id="chart"></div>
+   <div class="label" id="hnote" style="font-size:12px;margin-top:6px"></div>
   </div>
  </div>
 </div></header>
@@ -113,7 +115,7 @@ function demo(){let s=7,x=()=>(s=s*16807%2147483647)/2147483647,r=10400,o=[];
  for(let i=183;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);r+=(x()-.46)*80;o.push({date:d.toISOString().slice(0,10),rate22:Math.round(r/5)*5})}return o}
 async function load(){try{data=await (await fetch('data/rates.json?'+Date.now())).json()}catch(e){data=[]}
  if(data.length<2){data=demo();$('src').hidden=false}
- data.sort((a,b)=>a.date<b.date?-1:1);render();calc()}
+ data.sort((a,b)=>a.date<b.date?-1:1);render();initRanges();calc()}
 const rate=()=>+$('ovr').value||data[data.length-1].rate22;
 function render(){const n=data.length,r=rate(),p=data[n-2].rate22,dl=r-p,pc=dl/p*100;
  $('today').textContent=R(r);$('pavan').textContent=R(r*8);$('yest').textContent=R(p);
@@ -121,13 +123,15 @@ function render(){const n=data.length,r=rate(),p=data[n-2].rate22,dl=r-p,pc=dl/p
  const e=$('delta');e.hidden=false;e.className='delta '+(dl>=0?'up':'dn');e.textContent=(dl>=0?'▲ ':'▼ ')+R(Math.abs(dl))+' ('+Math.abs(pc).toFixed(2)+'%) vs yesterday';
  const h6=data.slice(-183).map(d=>d.rate22);$('hl').textContent=Math.min(...h6).toLocaleString('en-IN')+' – '+Math.max(...h6).toLocaleString('en-IN');
  chart()}
-function chart(){const h=data.slice(-range),W=600,H=210,pl=44,pb=24,pt=10,v=h.map(d=>d.rate22),mn=Math.min(...v),mx=Math.max(...v),s=(mx-mn)||1;
+function chart(){const h=data.slice(-range);if(h.length<2){$('chart').innerHTML='<p class="label">Not enough data yet.</p>';return}
+ const W=600,H=210,pl=44,pb=24,pt=10,v=h.map(d=>d.rate22),mn=Math.min(...v),mx=Math.max(...v),s=(mx-mn)||1;
  const X=i=>pl+i*(W-pl-8)/(h.length-1),Y=y=>H-pb-(y-mn)/s*(H-pb-pt),pts=h.map((d,i)=>X(i)+','+Y(d.rate22)).join(' ');
  $('chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gold rate history"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4a72c" stop-opacity=".45"/><stop offset="1" stop-color="#d4a72c" stop-opacity="0"/></linearGradient></defs>
  ${[mn,(mn+mx)/2,mx].map(t=>`<line x1="${pl}" x2="${W-8}" y1="${Y(t)}" y2="${Y(t)}" stroke="#ffffff1f"/><text x="${pl-6}" y="${Y(t)+4}" text-anchor="end" font-size="11" fill="#b9cfc3">${Math.round(t)}</text>`).join('')}
  <polygon points="${X(0)},${H-pb} ${pts} ${X(h.length-1)},${H-pb}" fill="url(#ag)"/><polyline points="${pts}" fill="none" stroke="#f0d58a" stroke-width="2.5" stroke-linejoin="round"/>
  <circle id="dot" r="5" fill="#f0d58a" stroke="#0c3326" stroke-width="2" cx="${X(h.length-1)}" cy="${Y(v[v.length-1])}"/>
- <text x="${pl}" y="${H-6}" font-size="11" fill="#b9cfc3">${fd(h[0].date)}</text><text x="${W-8}" y="${H-6}" text-anchor="end" font-size="11" fill="#b9cfc3">${fd(h[h.length-1].date)}</text></svg><div id="tip"></div>`;
+ ${h.length<=31?h.map((d,i)=>`<circle cx="${X(i)}" cy="${Y(d.rate22)}" r="3" fill="#f0d58a"/>`).join(''):''}
+ ${[0,1/3,2/3,1].map((f,k)=>{const i=Math.round(f*(h.length-1));return `<text x="${X(i)}" y="${H-6}" text-anchor="${k==0?'start':k==3?'end':'middle'}" font-size="11" fill="#b9cfc3">${fd(h[i].date)}</text>`}).join('')}</svg><div id="tip"></div>`;
  const c=$('chart'),svg=c.firstChild;
  c.onpointermove=ev=>{const b=svg.getBoundingClientRect(),fx=(ev.clientX-b.left)/b.width*W,i=Math.max(0,Math.min(h.length-1,Math.round((fx-pl)/(W-pl-8)*(h.length-1))));
   const d=$('dot');d.setAttribute('cx',X(i));d.setAttribute('cy',Y(v[i]));const t=$('tip');t.style.display='block';t.style.left=Math.max(50,Math.min(b.width-50,X(i)/W*b.width))+'px';t.textContent=fd(h[i].date)+' · '+R(v[i])};
@@ -141,7 +145,12 @@ function calc(){const r=rate(),m=(+$('mc').value||0)/100,g=(+$('gst').value||0)/
 document.querySelectorAll('input').forEach(i=>i.oninput=()=>{render();calc()});
 document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{$('w').value=b.dataset.w;calc()});
 document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{$('cash').value=b.dataset.c;calc()});
-document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{range=+b.dataset.r;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));chart()});
+function setRange(r){range=r;document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.r===r));chart()}
+function initRanges(){const sp=Math.round((new Date(data[data.length-1].date)-new Date(data[0].date))/864e5)+1;
+ document.querySelectorAll('.seg button').forEach(b=>{const r=+b.dataset.r;b.disabled=r<9999&&r>sp;b.title=b.disabled?'Not enough history yet':'';b.onclick=()=>setRange(r)});
+ $('hnote').textContent=sp<183?'History so far: '+sp+' days. Longer ranges unlock as daily data builds up.':'';
+ $('hll').textContent=sp<183?'Low – high ('+sp+' days)':'6-month low – high';
+ setRange(sp<183?9999:183)}
 function setTab(n){$('t1').setAttribute('aria-selected',n==1);$('t2').setAttribute('aria-selected',n==2);$('wbox').hidden=n!=1;$('cbox').hidden=n!=2;$('p1').hidden=n!=1;$('p2').hidden=n!=2}
 $('t1').onclick=()=>setTab(1);$('t2').onclick=()=>setTab(2);
 load();
