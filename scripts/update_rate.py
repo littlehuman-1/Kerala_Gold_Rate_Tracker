@@ -26,3 +26,5 @@ data = {d["date"]: d["rate22"] for d in json.loads(FILE.read_text())}
 data.update(found)
 FILE.write_text(json.dumps([{"date": k, "rate22": v} for k, v in sorted(data.items())], indent=1))
 print("Saved", len(found), "days; latest:", max(found), found[max(found)])
+<script data-goatcounter="https://littlehuman-1.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
