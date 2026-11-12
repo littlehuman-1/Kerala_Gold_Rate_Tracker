@@ -106,7 +106,8 @@ footer{padding:0 0 28px;font-size:12.5px;color:var(--mut)}
  </div>
  <p class="note">Rates are indicative. Making charge and GST rules vary by jeweller, so confirm before you buy.</p>
 </section></main>
-<footer class="wrap">Data updates daily from the Kerala 22 Ct rate · Built with plain HTML, CSS and JavaScript.</footer>
+<footer class="wrap">Data updates daily from the Kerala 22 Ct rate · Built with plain HTML, CSS and JavaScript.<br>
+<span id="vis" hidden>👁 <b id="vc">–</b> visits</span></footer>
 <script>
 const $=id=>document.getElementById(id),R=n=>isFinite(n)?'₹'+Math.round(n).toLocaleString('en-IN'):'–',R2=n=>isFinite(n)?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):'–';
 const fd=s=>new Date(s).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
@@ -154,4 +155,11 @@ function initRanges(){const sp=Math.round((new Date(data[data.length-1].date)-ne
 function setTab(n){$('t1').setAttribute('aria-selected',n==1);$('t2').setAttribute('aria-selected',n==2);$('wbox').hidden=n!=1;$('cbox').hidden=n!=2;$('p1').hidden=n!=1;$('p2').hidden=n!=2}
 $('t1').onclick=()=>setTab(1);$('t2').onclick=()=>setTab(2);
 load();
-</script></body></html>
+</script>
+<script data-goatcounter="https://YOURCODE.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script>
+fetch('https://YOURCODE.goatcounter.com/counter/TOTAL.json')
+ .then(r=>r.json()).then(j=>{document.getElementById('vc').textContent=j.count;document.getElementById('vis').hidden=false})
+ .catch(()=>{});
+</script>
+</body></html>
