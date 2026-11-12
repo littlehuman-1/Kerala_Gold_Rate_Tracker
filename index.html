@@ -159,7 +159,8 @@ load();
 <script data-goatcounter="https://littlehuman-1.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script>
 fetch('https://littlehuman-1.goatcounter.com/counter/TOTAL.json')
- .then(r=>r.json()).then(j=>{document.getElementById('vc').textContent=j.count;document.getElementById('vis').hidden=false})
- .catch(()=>{});
+ .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.json()})
+ .then(j=>{document.getElementById('vc').textContent=j.count;document.getElementById('vis').hidden=false})
+ .catch(e=>{console.error('Visit counter failed:',e);document.getElementById('vis').textContent='👁 visit counter unavailable';document.getElementById('vis').hidden=false});
 </script>
 </body></html>
