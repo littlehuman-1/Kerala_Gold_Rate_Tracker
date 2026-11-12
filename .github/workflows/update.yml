@@ -1,14 +1,96 @@
+
 name: Update gold rate
+
 on:
-  schedule: [{cron: "45 4 * * *"}]   # 10:15 AM IST daily
+  schedule:
+    - cron: "45 4 * * *" # 10:15 AM IST daily
   workflow_dispatch:
-permissions: {contents: write}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gold-rate-update
+  cancel-in-progress: false
+
 jobs:
   run:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+
     steps:
-      - uses: actions/checkout@v4
-      - run: python3 scripts/update_rate.py
-      - run: |
-          git config user.name "rate-bot"; git config user.email "bot@users.noreply.github.com"
-          git add data/rates.json; git diff --cached --quiet || git commit -m "Update rate"; git push
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Update Kerala gold rate
+        run: python3 scripts/update_rate.py
+
+      - name: Validate rate data
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from datetime import date
+
+          path = Path("data/rates.json")
+
+          if not path.exists():
+              raise SystemExit("ERROR: rates.json was not created")
+
+          try:
+              records = json.loads(path.read_text())
+          except Exception as e:
+              raise SystemExit(f"ERROR: Invalid JSON: {e}")
+
+          if not isinstance(records, list) or not records:
+              raise SystemExit("ERROR: Rate data is empty or invalid")
+
+          seen = set()
+
+          for item in records:
+              if not isinstance(item, dict):
+                  raise SystemExit("ERROR: Invalid record")
+
+              d = item.get("date")
+              r = item.get("rate22")
+
+              if not isinstance(d, str):
+                  raise SystemExit("ERROR: Missing date")
+
+              try:
+                  parsed = date.fromisoformat(d)
+                  if parsed.isoformat() != d:
+                      raise ValueError()
+              except ValueError:
+                  raise SystemExit(f"ERROR: Invalid date: {d}")
+
+              if d in seen:
+                  raise SystemExit(f"ERROR: Duplicate date: {d}")
+
+              seen.add(d)
+
+              if isinstance(r, bool) or not isinstance(r, (int, float)) or r <= 0:
+                  raise SystemExit(f"ERROR: Invalid rate for {d}: {r}")
+
+          dates = [item["date"] for item in records]
+
+          if dates != sorted(dates):
+              raise SystemExit("ERROR: Records are not in date order")
+
+          print(f"Validation successful: {len(records)} records")
+          print(f"Latest record: {records[-1]}")
+          PY
+
+      - name: Commit updated rates
+        run: |
+          git config user.name "rate-bot"
+          git config user.email "bot@users.noreply.github.com"
+
+          git add data/rates.json
+
+          if git diff --cached --quiet; then
+            echo "No rate changes to commit."
+          else
+            git commit -m "Update Kerala gold rate"
+            git push
+          fi
