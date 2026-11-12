@@ -108,54 +108,463 @@ footer{padding:0 0 28px;font-size:12.5px;color:var(--mut)}
 </section></main>
 <footer class="wrap">Data updates daily from the Kerala 22 Ct rate · Built with plain HTML, CSS and JavaScript.<br>
 <span id="vis" hidden>👁 <b id="vc">–</b> visits</span></footer>
-<script>
-const $=id=>document.getElementById(id),R=n=>isFinite(n)?'₹'+Math.round(n).toLocaleString('en-IN'):'–',R2=n=>isFinite(n)?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):'–';
-const fd=s=>new Date(s).toLocaleDateString('en-IN',{day:'numeric',month:'short'});
-let data=[],range=183,tab=1;
-function demo(){let s=7,x=()=>(s=s*16807%2147483647)/2147483647,r=10400,o=[];
- for(let i=183;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);r+=(x()-.46)*80;o.push({date:d.toISOString().slice(0,10),rate22:Math.round(r/5)*5})}return o}
-async function load(){try{data=await (await fetch('data/rates.json?'+Date.now())).json()}catch(e){data=[]}
- if(data.length<2){data=demo();$('src').hidden=false}
- data.sort((a,b)=>a.date<b.date?-1:1);render();initRanges();calc()}
-const rate=()=>+$('ovr').value||data[data.length-1].rate22;
-function render(){const n=data.length,r=rate(),p=data[n-2].rate22,dl=r-p,pc=dl/p*100;
- $('today').textContent=R(r);$('pavan').textContent=R(r*8);$('yest').textContent=R(p);
- $('when').textContent='Today · '+fd(data[n-1].date);$('ydl').textContent='Yesterday · '+fd(data[n-2].date);
- const e=$('delta');e.hidden=false;e.className='delta '+(dl>=0?'up':'dn');e.textContent=(dl>=0?'▲ ':'▼ ')+R(Math.abs(dl))+' ('+Math.abs(pc).toFixed(2)+'%) vs yesterday';
- const h6=data.slice(-183).map(d=>d.rate22);$('hl').textContent=Math.min(...h6).toLocaleString('en-IN')+' – '+Math.max(...h6).toLocaleString('en-IN');
- chart()}
-function chart(){const h=data.slice(-range);if(h.length<2){$('chart').innerHTML='<p class="label">Not enough data yet.</p>';return}
- const W=600,H=210,pl=44,pb=24,pt=10,v=h.map(d=>d.rate22),mn=Math.min(...v),mx=Math.max(...v),s=(mx-mn)||1;
- const X=i=>pl+i*(W-pl-8)/(h.length-1),Y=y=>H-pb-(y-mn)/s*(H-pb-pt),pts=h.map((d,i)=>X(i)+','+Y(d.rate22)).join(' ');
- $('chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Gold rate history"><defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d4a72c" stop-opacity=".45"/><stop offset="1" stop-color="#d4a72c" stop-opacity="0"/></linearGradient></defs>
- ${[mn,(mn+mx)/2,mx].map(t=>`<line x1="${pl}" x2="${W-8}" y1="${Y(t)}" y2="${Y(t)}" stroke="#ffffff1f"/><text x="${pl-6}" y="${Y(t)+4}" text-anchor="end" font-size="11" fill="#b9cfc3">${Math.round(t)}</text>`).join('')}
- <polygon points="${X(0)},${H-pb} ${pts} ${X(h.length-1)},${H-pb}" fill="url(#ag)"/><polyline points="${pts}" fill="none" stroke="#f0d58a" stroke-width="2.5" stroke-linejoin="round"/>
- <circle id="dot" r="5" fill="#f0d58a" stroke="#0c3326" stroke-width="2" cx="${X(h.length-1)}" cy="${Y(v[v.length-1])}"/>
- ${h.length<=31?h.map((d,i)=>`<circle cx="${X(i)}" cy="${Y(d.rate22)}" r="3" fill="#f0d58a"/>`).join(''):''}
- ${[0,1/3,2/3,1].map((f,k)=>{const i=Math.round(f*(h.length-1));return `<text x="${X(i)}" y="${H-6}" text-anchor="${k==0?'start':k==3?'end':'middle'}" font-size="11" fill="#b9cfc3">${fd(h[i].date)}</text>`}).join('')}</svg><div id="tip"></div>`;
- const c=$('chart'),svg=c.firstChild;
- c.onpointermove=ev=>{const b=svg.getBoundingClientRect(),fx=(ev.clientX-b.left)/b.width*W,i=Math.max(0,Math.min(h.length-1,Math.round((fx-pl)/(W-pl-8)*(h.length-1))));
-  const d=$('dot');d.setAttribute('cx',X(i));d.setAttribute('cy',Y(v[i]));const t=$('tip');t.style.display='block';t.style.left=Math.max(50,Math.min(b.width-50,X(i)/W*b.width))+'px';t.textContent=fd(h[i].date)+' · '+R(v[i])};
- c.onpointerleave=()=>{$('tip').style.display='none';$('dot').setAttribute('cx',X(h.length-1));$('dot').setAttribute('cy',Y(v[v.length-1]))}}
-function calc(){const r=rate(),m=(+$('mc').value||0)/100,g=(+$('gst').value||0)/100,w=+$('w').value||0,c=+$('cash').value||0;
- const gv=w*r,mk=gv*m,gs=(gv+mk)*g,tot=gv+mk+gs;
- $('c1').textContent=R2(gv);$('c2').textContent=R2(mk);$('c3').textContent=R2(gs);$('c4').textContent=R2(tot);
- $('b1').style.width=gv/tot*100+'%';$('b2').style.width=mk/tot*100+'%';$('b3').style.width=gs/tot*100+'%';
- const coin=c/(r*(1+g)),orn=c/(r*(1+m)*(1+g));
- $('r1').textContent=coin.toFixed(3)+' gm';$('r2').textContent=orn.toFixed(3)+' gm';$('r3').textContent=R2(c-orn*r)}
-document.querySelectorAll('input').forEach(i=>i.oninput=()=>{render();calc()});
-document.querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{$('w').value=b.dataset.w;calc()});
-document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{$('cash').value=b.dataset.c;calc()});
-function setRange(r){range=r;document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.r===r));chart()}
-function initRanges(){const sp=Math.round((new Date(data[data.length-1].date)-new Date(data[0].date))/864e5)+1;
- document.querySelectorAll('.seg button').forEach(b=>{const r=+b.dataset.r;b.disabled=r<9999&&r>sp;b.title=b.disabled?'Not enough history yet':'';b.onclick=()=>setRange(r)});
- $('hnote').textContent=sp<183?'History so far: '+sp+' days. Longer ranges unlock as daily data builds up.':'';
- $('hll').textContent=sp<183?'Low – high ('+sp+' days)':'6-month low – high';
- setRange(sp<183?9999:183)}
-function setTab(n){$('t1').setAttribute('aria-selected',n==1);$('t2').setAttribute('aria-selected',n==2);$('wbox').hidden=n!=1;$('cbox').hidden=n!=2;$('p1').hidden=n!=1;$('p2').hidden=n!=2}
-$('t1').onclick=()=>setTab(1);$('t2').onclick=()=>setTab(2);
+
+const $ = id => document.getElementById(id);
+
+const R = n => Number.isFinite(n)
+  ? '₹' + Math.round(n).toLocaleString('en-IN')
+  : '–';
+
+const R2 = n => Number.isFinite(n)
+  ? '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 2 })
+  : '–';
+
+const fd = s => {
+  if (!s) return '–';
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+
+const todayISO = () => {
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0')
+  ].join('-');
+};
+
+let data = [];
+let range = 183;
+let manualRate = null;
+
+try {
+  const saved = localStorage.getItem('keralaGoldManualRate');
+  if (saved !== null && Number.isFinite(Number(saved)) && Number(saved) > 0) {
+    manualRate = Number(saved);
+    $('ovr').value = manualRate;
+  }
+} catch (e) {
+  console.warn('Manual rate storage is unavailable:', e);
+}
+
+// Accept only real calendar dates in YYYY-MM-DD format.
+function validDate(s) {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+
+  const [y, m, d] = s.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+
+  return date.getFullYear() === y &&
+    date.getMonth() === m - 1 &&
+    date.getDate() === d;
+}
+
+// Keep only valid records and one record per date.
+function cleanRates(records) {
+  if (!Array.isArray(records)) return [];
+
+  const byDate = new Map();
+
+  records.forEach(item => {
+    if (!item || typeof item !== 'object') return;
+
+    const date = item.date;
+    const rate = Number(item.rate22);
+
+    if (!validDate(date)) return;
+    if (!Number.isFinite(rate) || rate <= 0) return;
+
+    // A later duplicate replaces an earlier duplicate.
+    byDate.set(date, { date, rate22: rate });
+  });
+
+  return [...byDate.values()].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+}
+
+function currentRate() {
+  if (Number.isFinite(manualRate) && manualRate > 0) {
+    return manualRate;
+  }
+
+  if (!data.length) return null;
+
+  return data[data.length - 1].rate22;
+}
+
+function setStatus(message) {
+  $('src').textContent = message;
+  $('src').hidden = !message;
+}
+
+async function load() {
+  setStatus('Loading rate data…');
+  $('when').textContent = 'Loading Kerala gold rate…';
+
+  try {
+    const response = await fetch('data/rates.json?' + Date.now(), {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error('Rate file returned HTTP ' + response.status);
+    }
+
+    const records = await response.json();
+    data = cleanRates(records);
+
+    if (!data.length) {
+      throw new Error('No valid rate records found');
+    }
+
+    render();
+    initRanges();
+    calc();
+
+  } catch (error) {
+    console.error('Gold rate data could not be loaded:', error);
+
+    data = [];
+    render();
+    initRanges();
+    calc();
+  }
+}
+
+function render() {
+  const r = currentRate();
+  const n = data.length;
+
+  if (r === null) {
+    $('today').textContent = 'Unavailable';
+    $('pavan').textContent = '–';
+    $('yest').textContent = '–';
+    $('hl').textContent = '–';
+    $('when').textContent = 'Genuine Kerala 22K rate is currently unavailable';
+    $('ydl').textContent = 'Previous record';
+    $('hll').textContent = 'Rate history';
+    $('delta').hidden = true;
+
+    setStatus('Rate unavailable');
+    $('chart').innerHTML =
+      '<p class="label">Rate history is unavailable. Please try again later.</p>';
+
+    return;
+  }
+
+  $('today').textContent = R(r);
+  $('pavan').textContent = R(r * 8);
+
+  if (manualRate !== null) {
+    $('when').textContent = 'Manual rate · not independently verified';
+    setStatus('Manual rate');
+  } else if (n) {
+    const latest = data[n - 1];
+    const age = Math.floor(
+      (new Date(todayISO() + 'T00:00:00') -
+       new Date(latest.date + 'T00:00:00')) / 86400000
+    );
+
+    $('when').textContent = 'Latest available rate · ' + fd(latest.date);
+
+    if (age > 1) {
+      setStatus('Data may be outdated');
+    } else {
+      setStatus('Kerala 22K rate data');
+    }
+  }
+
+  if (n >= 2) {
+    const previous = data[n - 2];
+    $('yest').textContent = R(previous.rate22);
+    $('ydl').textContent = 'Previous record · ' + fd(previous.date);
+
+    // Compare the displayed rate against the previous available record.
+    const baseline = data[n - 1].rate22;
+    const comparison = manualRate !== null ? baseline : previous.rate22;
+    const change = r - comparison;
+    const percent = comparison > 0 ? change / comparison * 100 : 0;
+
+    const delta = $('delta');
+    delta.hidden = false;
+    delta.className = 'delta ' + (change >= 0 ? 'up' : 'dn');
+    delta.textContent =
+      (change >= 0 ? '▲ ' : '▼ ') +
+      R(Math.abs(change)) +
+      ' (' + Math.abs(percent).toFixed(2) + '%)' +
+      (manualRate !== null ? ' vs latest recorded rate' : ' vs previous record');
+  } else {
+    $('yest').textContent = '–';
+    $('ydl').textContent = 'Previous record unavailable';
+    $('delta').hidden = true;
+  }
+
+  if (n) {
+    const history = data.slice(-183).map(d => d.rate22);
+    $('hl').textContent =
+      Math.min(...history).toLocaleString('en-IN') +
+      ' – ' +
+      Math.max(...history).toLocaleString('en-IN');
+  } else {
+    $('hl').textContent = '–';
+  }
+
+  chart();
+}
+
+function chart() {
+  const history = data.slice(-range);
+
+  if (history.length < 2) {
+    $('chart').innerHTML =
+      '<p class="label">Not enough genuine rate history to draw a chart yet.</p>';
+    return;
+  }
+
+  const W = 600, H = 210, pl = 60, pb = 24, pt = 10;
+  const values = history.map(d => d.rate22);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+
+  const X = i => pl + i * (W - pl - 8) / (history.length - 1);
+  const Y = value => H - pb - (value - min) / span * (H - pb - pt);
+
+  const points = history.map((d, i) =>
+    X(i) + ',' + Y(d.rate22)
+  ).join(' ');
+
+  $('chart').innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" role="img"
+         aria-label="Kerala 22 carat gold rate history">
+      <defs>
+        <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#d4a72c" stop-opacity=".45"/>
+          <stop offset="1" stop-color="#d4a72c" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+
+      ${[min, (min + max) / 2, max].map(value => `
+        <line x1="${pl}" x2="${W - 8}"
+              y1="${Y(value)}" y2="${Y(value)}"
+              stroke="#ffffff1f"/>
+        <text x="${pl - 8}" y="${Y(value) + 4}"
+              text-anchor="end" font-size="11" fill="#b9cfc3">
+          ${Math.round(value)}
+        </text>
+      `).join('')}
+
+      <polygon points="${X(0)},${H - pb} ${points} ${X(history.length - 1)},${H - pb}"
+               fill="url(#ag)"/>
+
+      <polyline points="${points}" fill="none"
+                stroke="#f0d58a" stroke-width="2.5"
+                stroke-linejoin="round"/>
+
+      <circle id="dot" r="5" fill="#f0d58a"
+              stroke="#0c3326" stroke-width="2"
+              cx="${X(history.length - 1)}"
+              cy="${Y(values[values.length - 1])}"/>
+
+      ${history.length <= 31 ? history.map((d, i) => `
+        <circle cx="${X(i)}" cy="${Y(d.rate22)}"
+                r="3" fill="#f0d58a"/>
+      `).join('') : ''}
+
+      ${[0, 1/3, 2/3, 1].map((f, k) => {
+        const i = Math.round(f * (history.length - 1));
+        return `
+          <text x="${X(i)}" y="${H - 6}"
+                text-anchor="${k === 0 ? 'start' : k === 3 ? 'end' : 'middle'}"
+                font-size="11" fill="#b9cfc3">
+            ${fd(history[i].date)}
+          </text>
+        `;
+      }).join('')}
+    </svg>
+    <div id="tip"></div>
+  `;
+
+  const container = $('chart');
+  const svg = container.querySelector('svg');
+
+  container.onpointermove = event => {
+    const bounds = svg.getBoundingClientRect();
+    const fx = (event.clientX - bounds.left) / bounds.width * W;
+
+    const i = Math.max(0, Math.min(
+      history.length - 1,
+      Math.round((fx - pl) / (W - pl - 8) * (history.length - 1))
+    ));
+
+    const dot = $('dot');
+    dot.setAttribute('cx', X(i));
+    dot.setAttribute('cy', Y(values[i]));
+
+    const tip = $('tip');
+    tip.style.display = 'block';
+    tip.style.left =
+      Math.max(50, Math.min(bounds.width - 50, X(i) / W * bounds.width)) + 'px';
+
+    tip.textContent = fd(history[i].date) + ' · ' + R(values[i]);
+  };
+
+  container.onpointerleave = () => {
+    $('tip').style.display = 'none';
+    $('dot').setAttribute('cx', X(history.length - 1));
+    $('dot').setAttribute('cy', Y(values[values.length - 1]));
+  };
+}
+
+function calc() {
+  const r = currentRate();
+
+  if (r === null) {
+    ['c1', 'c2', 'c3', 'c4', 'r1', 'r2', 'r3'].forEach(id => {
+      $(id).textContent = '–';
+    });
+
+    ['b1', 'b2', 'b3'].forEach(id => {
+      $(id).style.width = '0%';
+    });
+
+    return;
+  }
+
+  const weight = Math.max(0, Number($('w').value) || 0);
+  const cash = Math.max(0, Number($('cash').value) || 0);
+  const making = Math.max(0, Number($('mc').value) || 0) / 100;
+  const gst = Math.max(0, Number($('gst').value) || 0) / 100;
+
+  const goldValue = weight * r;
+  const makingCharge = goldValue * making;
+  const gstAmount = (goldValue + makingCharge) * gst;
+  const total = goldValue + makingCharge + gstAmount;
+
+  $('c1').textContent = R2(goldValue);
+  $('c2').textContent = R2(makingCharge);
+  $('c3').textContent = R2(gstAmount);
+  $('c4').textContent = R2(total);
+
+  if (total > 0) {
+    $('b1').style.width = goldValue / total * 100 + '%';
+    $('b2').style.width = makingCharge / total * 100 + '%';
+    $('b3').style.width = gstAmount / total * 100 + '%';
+  } else {
+    ['b1', 'b2', 'b3'].forEach(id => {
+      $(id).style.width = '0%';
+    });
+  }
+
+  const coinWeight = cash / (r * (1 + gst));
+  const ornamentWeight = cash / (r * (1 + making) * (1 + gst));
+
+  $('r1').textContent = coinWeight.toFixed(3) + ' gm';
+  $('r2').textContent = ornamentWeight.toFixed(3) + ' gm';
+  $('r3').textContent = R2(cash - ornamentWeight * r);
+}
+
+function setRange(value) {
+  range = value;
+
+  document.querySelectorAll('.seg button').forEach(button => {
+    button.setAttribute('aria-pressed', Number(button.dataset.r) === range);
+  });
+
+  chart();
+}
+
+function initRanges() {
+  const span = data.length >= 2
+    ? Math.round(
+        (new Date(data[data.length - 1].date + 'T00:00:00') -
+         new Date(data[0].date + 'T00:00:00')) / 86400000
+      ) + 1
+    : data.length;
+
+  document.querySelectorAll('.seg button').forEach(button => {
+    const value = Number(button.dataset.r);
+    button.disabled = value < 9999 && value > span;
+    button.title = button.disabled ? 'Not enough history yet' : '';
+    button.onclick = () => setRange(value);
+  });
+
+  $('hnote').textContent = span < 183
+    ? 'History so far: ' + span + ' days. Longer ranges unlock as daily data builds up.'
+    : '';
+
+  $('hll').textContent = span < 183
+    ? 'Low – high (' + span + ' days)'
+    : '6-month low – high';
+
+  setRange(span < 183 ? 9999 : 183);
+}
+
+function setTab(n) {
+  $('t1').setAttribute('aria-selected', n === 1);
+  $('t2').setAttribute('aria-selected', n === 2);
+  $('wbox').hidden = n !== 1;
+  $('cbox').hidden = n !== 2;
+  $('p1').hidden = n !== 1;
+  $('p2').hidden = n !== 2;
+}
+
+$('t1').onclick = () => setTab(1);
+$('t2').onclick = () => setTab(2);
+
+$('ovr').oninput = () => {
+  const value = Number($('ovr').value);
+
+  if ($('ovr').value.trim() === '') {
+    manualRate = null;
+
+    try {
+      localStorage.removeItem('keralaGoldManualRate');
+    } catch (e) {
+      console.warn('Could not clear saved manual rate:', e);
+    }
+  } else if (Number.isFinite(value) && value > 0) {
+    manualRate = value;
+
+    try {
+      localStorage.setItem('keralaGoldManualRate', String(value));
+    } catch (e) {
+      console.warn('Could not save manual rate:', e);
+    }
+  } else {
+    manualRate = null;
+  }
+
+  render();
+  calc();
+};
+
+['w', 'cash', 'mc', 'gst'].forEach(id => {
+  $(id).oninput = calc;
+});
+
+document.querySelectorAll('[data-w]').forEach(button => {
+  button.onclick = () => {
+    $('w').value = button.dataset.w;
+    calc();
+  };
+});
+
+document.querySelectorAll('[data-c]').forEach(button => {
+  button.onclick = () => {
+    $('cash').value = button.dataset.c;
+    calc();
+  };
+});
+
 load();
-</script>
+
 <script data-goatcounter="https://littlehuman-1.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script>
 fetch('https://littlehuman-1.goatcounter.com/counter/TOTAL.json')
