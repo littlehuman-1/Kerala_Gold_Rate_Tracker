@@ -3,7 +3,7 @@ name: Update gold rate
 
 on:
   schedule:
-    - cron: "45 4 * * *" # 10:15 AM IST daily
+    - cron: "53 4 * * *" # 10:23 AM IST daily
   workflow_dispatch:
 
 permissions:
@@ -16,7 +16,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -30,7 +30,8 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
-          from datetime import date
+          from datetime import date, datetime
+          from zoneinfo import ZoneInfo
 
           path = Path("data/rates.json")
 
@@ -77,8 +78,22 @@ jobs:
           if dates != sorted(dates):
               raise SystemExit("ERROR: Records are not in date order")
 
+          latest_date = dates[-1]
+          today = datetime.now(
+              ZoneInfo("Asia/Kolkata")
+          ).date().isoformat()
+
           print(f"Validation successful: {len(records)} records")
-          print(f"Latest record: {records[-1]}")
+          print(f"Latest record date: {latest_date}")
+          print(f"Expected date: {today}")
+
+          if latest_date != today:
+              raise SystemExit(
+                  f"ERROR: Gold rate is not updated for today ({today}). "
+                  f"Latest available record is {latest_date}."
+              )
+
+          print("Today's gold rate successfully validated.")
           PY
 
       - name: Commit updated rates
